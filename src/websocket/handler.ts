@@ -1,7 +1,8 @@
 import { WebSocket } from "ws";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../utils/prisma";
-import { setUserOnline, setUserOffline, publishPresence } from "../utils/redis";
+import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates } from "../utils/redis";
+export const wsClients: Record<string, WebSocket> = {};
 
 export function handleConnection(ws: WebSocket, req: any) {
     let user: any = null;
@@ -29,12 +30,15 @@ export function handleConnection(ws: WebSocket, req: any) {
                 try {
                     user = verifyToken(data.token);
                     isAuthenticated = true;
+                    wsClients[user.id] = ws;
                     ws.send(JSON.stringify({ type: "auth", success: true, user }));
                     console.log(`[WS] ${user.id}: Authenticated and connected`);
 
                     setUserOnline(user.id);
                     publishPresence(user.id, 'online');
                     refreshPresence();
+                    subscribeToFriendsTabUpdates(user.id);
+
 
                     // Start heartbeat interval
                     heartbeatInterval = setInterval(() => {
@@ -66,6 +70,30 @@ export function handleConnection(ws: WebSocket, req: any) {
                 return;
 
             }
+
+            // Handle Tab Updates
+            if (data.type === "all_tabs_update" && isAuthenticated) {
+                const tabPayload = {
+                    userId: user.id,
+                    tabs: data.tabs,
+                    updatedAt: new Date().toISOString()
+                };
+                publishAllTabsUpdtate(user.id, tabPayload);
+                setLatestTabData(user.id, data.tabs);
+                console.log(`[WS] ${user.id}: Published all tabs update`, data.tabs);
+                return;
+            }
+
+            if (data.type === "active_tab_update" && isAuthenticated) {
+                const tabPayload = {
+                    userId: user.id,
+                    tab: data.tab,
+                    updatedAt: new Date().toISOString()
+                };
+                publishActiveTabUpdate(user.id, tabPayload);
+                console.log(`[WS] ${user.id}: Published active tab update`, data.tab);
+                return;
+            }
         } catch (err) {
             console.error(`[WS] Error processing message: ${err}`);
             ws.send(JSON.stringify({ type: "error", error: "Invalid message format" }));
@@ -76,6 +104,7 @@ export function handleConnection(ws: WebSocket, req: any) {
     ws.on('close', async () => {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if(isAuthenticated && user) {
+            delete wsClients[user.id];
             await setUserOffline(user.id);
             await publishPresence(user.id, 'offline');
 
