@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { isUserOnline } from '../utils/redis';
+import { isUserOnline, getActiveTabData, getLatestTabData } from '../utils/redis';
 
 // Send a friend request
 export const sendFriendRequest = async (req: Request, res: Response) => {
@@ -530,7 +530,7 @@ export const getFriendshipStatus = async (req: Request, res: Response) => {
   }
 };
 
-// get all friends with online/offline status
+// get all friends with online/offline status and Tabs data
 export const getAllFriendsWithStatus = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
@@ -552,12 +552,20 @@ export const getAllFriendsWithStatus = async (req: Request, res: Response) => {
     const friendsWithStatus = await Promise.all(
       rels.map(async ({ friend }) => {
         const online = await isUserOnline(friend.id);
+        let activeTab = null;
+        let allTabs = null;
+        if (online) {
+          activeTab = await getActiveTabData(friend.id);
+          allTabs = await getLatestTabData(friend.id);
+        }
         return {
           id: friend.id,
           username: friend.username,
           displayName: friend.displayName,
           isOnline: online,
           lastSeen: friend.lastOnlineAt,
+          activeTab,
+          allTabs,
         };
       })
     );

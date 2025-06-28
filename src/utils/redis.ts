@@ -28,7 +28,7 @@ export const publishAllTabsUpdtate = async (userId: string, tabData: any) => {
 }
 
 export const setLatestTabData = async (userId: string, tabData: any) => {
-  await redis.set(`latest-tabs:${userId}`, JSON.stringify(tabData), 'EX', 60); // expires in 60s
+  await redis.set(`latest-tabs:${userId}`, JSON.stringify(tabData));
 };
 
 export const getLatestTabData = async (userId: string) => {
@@ -38,6 +38,15 @@ export const getLatestTabData = async (userId: string) => {
 
 export const publishActiveTabUpdate = async (userId: string, tabData: any) => {
   await redis.publish(`active-tab-update:${userId}`, JSON.stringify(tabData));
+}
+
+export const setActiveTabData = async (userId: string, tabData: any) => {
+  await redis.set(`active-tab:${userId}`, JSON.stringify(tabData));
+}
+
+export const getActiveTabData = async (userId: string) => {
+  const data = await redis.get(`active-tab:${userId}`);
+  return data ? JSON.parse(data) : null;
 }
 
 export const subscribeToFriendsTabUpdates = async (userId: string) => {

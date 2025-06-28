@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../utils/prisma";
-import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates } from "../utils/redis";
+import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates, setActiveTabData } from "../utils/redis";
 export const wsClients: Record<string, WebSocket> = {};
 
 export function handleConnection(ws: WebSocket, req: any) {
@@ -91,6 +91,7 @@ export function handleConnection(ws: WebSocket, req: any) {
                     updatedAt: new Date().toISOString()
                 };
                 publishActiveTabUpdate(user.id, tabPayload);
+                setActiveTabData(user.id, data.tab);
                 console.log(`[WS] ${user.id}: Published active tab update`, data.tab);
                 return;
             }
