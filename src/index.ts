@@ -3,6 +3,7 @@ import cors from 'cors';
 import { userRoutes, friendRoutes } from './routes';
 import http from 'http';
 import { initializeWebSocketServer } from './websocket/server';
+import profileRoutes from './routes/profileRoutes';
 
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

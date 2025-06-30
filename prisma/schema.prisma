@@ -13,17 +13,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PrivacyLevel {
+  public
+  friends_only
+  private
+}
+
+enum EmailPrivacyLevel {
+  public
+  friends_only
+}
+
 model User {
   id             String   @id @default(uuid())
   username       String   @unique
   password       String
   email          String?  @unique
+  emailPrivacy   EmailPrivacyLevel @default(friends_only)
   displayName    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   lastOnlineAt   DateTime @default(now())
   privacyLevel   String   @default("friends-only")
-  
+
+  dateOfBirth    DateTime?
+  dobPrivacy     PrivacyLevel? @default(private)
+
   // Friend relationships
   sentFriendRequests     FriendRequest[] @relation("Sender")
   receivedFriendRequests FriendRequest[] @relation("Receiver")
@@ -31,7 +46,7 @@ model User {
   // Friends relation (self-relation)
   friends    Friendship[] @relation("UserFriends")
   friendsOf  Friendship[] @relation("FriendOf")
-  
+
   @@map("users")
 }
 
