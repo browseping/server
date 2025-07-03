@@ -42,10 +42,12 @@ model User {
   // Friend relationships
   sentFriendRequests     FriendRequest[] @relation("Sender")
   receivedFriendRequests FriendRequest[] @relation("Receiver")
-  
+
   // Friends relation (self-relation)
   friends    Friendship[] @relation("UserFriends")
   friendsOf  Friendship[] @relation("FriendOf")
+
+  presenceSessions PresenceSession[]
 
   @@map("users")
 }
@@ -78,4 +80,19 @@ model Friendship {
   
   @@unique([userId, friendId])
   @@map("friendships")
+}
+
+model PresenceSession {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+
+  startTime  DateTime
+  endTime    DateTime?
+  duration   Int?
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId, startTime])
+  @@map("presence_sessions")
 }

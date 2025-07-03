@@ -21,7 +21,7 @@ export function handleConnection(ws: WebSocket, req: any) {
     const HEARTBEAT_TTL = 15; // seconds
     const HEARTBEAT_EXPECTED = 10 * 1000; // ms
 
-    ws.on("message", (message) => {
+    ws.on("message", async (message) => {
         try {
             const data = JSON.parse(message.toString());
 
@@ -39,6 +39,15 @@ export function handleConnection(ws: WebSocket, req: any) {
                     refreshPresence();
                     subscribeToFriendsTabUpdates(user.id);
 
+                    // Create a new presence session
+                    const session = await prisma.presenceSession.create({
+                        data: {
+                            userId: user.id,
+                            startTime: new Date(),
+                        }
+                    });
+                    // Store sessionId on ws object
+                    (ws as any).presenceSessionId = session.id;
 
                     // Start heartbeat interval
                     heartbeatInterval = setInterval(() => {
@@ -104,10 +113,38 @@ export function handleConnection(ws: WebSocket, req: any) {
 
     ws.on('close', async () => {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
-        if(isAuthenticated && user) {
+        if (isAuthenticated && user) {
             delete wsClients[user.id];
             await setUserOffline(user.id);
             await publishPresence(user.id, 'offline');
+
+            // Try to use sessionId from ws object
+            let sessionId = (ws as any).presenceSessionId;
+            if (sessionId) {
+                const session = await prisma.presenceSession.findUnique({ where: { id: sessionId } });
+                if (session && !session.endTime) {
+                    const endTime = new Date();
+                    const duration = Math.floor((endTime.getTime() - session.startTime.getTime()) / 1000);
+                    await prisma.presenceSession.update({
+                        where: { id: sessionId },
+                        data: { endTime, duration }
+                    });
+                }
+            } else {
+                // Fallback: find the latest open session
+                const openSession = await prisma.presenceSession.findFirst({
+                    where: { userId: user.id, endTime: null },
+                    orderBy: { startTime: 'desc' }
+                });
+                if (openSession) {
+                    const endTime = new Date();
+                    const duration = Math.floor((endTime.getTime() - openSession.startTime.getTime()) / 1000);
+                    await prisma.presenceSession.update({
+                        where: { id: openSession.id },
+                        data: { endTime, duration }
+                    });
+                }
+            }
 
             await prisma.user.update({
                 where: { id: user.id },
