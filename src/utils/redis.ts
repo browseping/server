@@ -92,5 +92,32 @@ export const subscribeToFriendsTabUpdates = async (userId: string) => {
 
 }
 
+// Tab Session and Aggregates Functions
+
+export const setCurrentTabSession = async (userId: string, domain: string, startTime: number) => {
+  await redis.hmset(`tab-session:${userId}`, { domain, startTime });
+};
+
+export const getCurrentTabSession = async (userId: string) => {
+  const session = await redis.hgetall(`tab-session:${userId}`);
+  return session && session.domain && session.startTime ? session : null;
+};
+
+export const incrementTabAggregate = async (userId: string, domain: string, seconds: number) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await redis.hincrby(`tab-agg:${userId}:${today}`, domain, seconds);
+};
+
+export const getTabAggregates = async (userId: string, date: string) => {
+  console.log(date)
+  return await redis.hgetall(`tab-agg:${userId}:${date}`);
+};
+
+export const clearTabSession = async (userId: string) => {
+  await redis.del(`tab-session:${userId}`);
+};
+export const clearTabAggregates = async (userId: string, date: string) => {
+  await redis.del(`tab-agg:${userId}:${date}`);
+};
 
 export default redis;

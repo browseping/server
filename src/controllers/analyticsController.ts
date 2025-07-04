@@ -45,3 +45,39 @@ export const getWeeklyPresence = async (req: Request, res: Response) => {
   }
   res.json({ success: true, days });
 };
+
+// GET /api/analytics/tab-usage/today
+export const getTodayTabUsage = async (req: Request, res: Response) => {
+  const userId = req.user.id;
+  const { start, end } = getDayRange(new Date());
+  const usages = await prisma.tabUsage.findMany({
+    where: {
+      userId,
+      date: { gte: start, lte: end }
+    }
+  });
+
+  res.json({ success: true, data: usages.map(u => ({ domain: u.domain, seconds: u.seconds })) });
+};
+
+// GET /api/analytics/tab-usage/weekly
+export const getWeeklyTabUsage = async (req: Request, res: Response) => {
+  const userId = req.user.id;
+  const weekData: { date: string, domains: { domain: string, seconds: number }[] }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const { start, end } = getDayRange(date);
+    const usages = await prisma.tabUsage.findMany({
+      where: {
+        userId,
+        date: { gte: start, lte: end }
+      }
+    });
+    weekData.push({
+      date: start.toISOString().slice(0, 10),
+      domains: usages.map(u => ({ domain: u.domain, seconds: u.seconds }))
+    });
+  }
+  res.json({ success: true, data: weekData });
+};

@@ -49,6 +49,9 @@ model User {
 
   presenceSessions PresenceSession[]
 
+  tabSessions TabSession[]
+  tabUsages   TabUsage[]
+
   @@map("users")
 }
 
@@ -95,4 +98,37 @@ model PresenceSession {
 
   @@index([userId, startTime])
   @@map("presence_sessions")
+}
+
+model TabSession {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+
+  domain     String
+  startTime  DateTime
+  endTime    DateTime?
+  duration   Int?
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId, startTime])
+  @@index([userId, domain, startTime])
+  @@map("tab_sessions")
+}
+
+model TabUsage {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  date      DateTime
+  domain    String
+  seconds   Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, domain])
+  @@index([userId, date])
+  @@map("tab_usage")
 }

@@ -2,6 +2,7 @@ import { WebSocket } from "ws";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../utils/prisma";
 import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates, setActiveTabData } from "../utils/redis";
+import { setCurrentTabSession, getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates } from '../utils/redis';
 export const wsClients: Record<string, WebSocket> = {};
 
 export function handleConnection(ws: WebSocket, req: any) {
@@ -94,6 +95,18 @@ export function handleConnection(ws: WebSocket, req: any) {
             }
 
             if (data.type === "active_tab_update" && isAuthenticated) {
+                const now = Date.now();
+                const domain = data.tab.url;
+                const prevSession = await getCurrentTabSession(user.id);
+                if (prevSession && prevSession.domain && prevSession.startTime) {
+                    const duration = Math.floor((now - Number(prevSession.startTime)) / 1000);
+                    if (duration > 0 && prevSession.domain !== domain) {
+                        await incrementTabAggregate(user.id, prevSession.domain, duration);
+                    }
+                }
+
+                await setCurrentTabSession(user.id, domain, now);
+
                 const tabPayload = {
                     userId: user.id,
                     tab: data.tab,
@@ -151,6 +164,28 @@ export function handleConnection(ws: WebSocket, req: any) {
                 data: { lastOnlineAt: new Date() }
             });
             console.log(`[WS] ${user.id}: Disconnected and set offline`);
+
+            const currentTabSession = await getCurrentTabSession(user.id);
+            if (currentTabSession && currentTabSession.domain && currentTabSession.startTime) {
+                const now = Date.now();
+                const duration = Math.floor((now - Number(currentTabSession.startTime)) / 1000);
+                if (duration > 0) {
+                    const today = new Date().toISOString().slice(0, 10);
+                    await incrementTabAggregate(user.id, currentTabSession.domain, duration);
+                }
+            }
+            const today = new Date().toISOString().slice(0, 10);
+            const aggregates = await getTabAggregates(user.id, today);
+            console.log(`[WS] ${user.id}: Aggregates for today`, aggregates);
+            for (const [domain, seconds] of Object.entries(aggregates)) {
+                await prisma.tabUsage.upsert({
+                    where: { userId_date_domain: { userId: user.id, date: new Date(today), domain } },
+                    update: { seconds: { increment: Number(seconds) } },
+                    create: { userId: user.id, date: new Date(today), domain, seconds: Number(seconds) }
+                });
+            }
+            await clearTabAggregates(user.id, today);
+            await clearTabSession(user.id);
         } else {
             console.log(`[WS] Unauthenticated user disconnected`);
         }
