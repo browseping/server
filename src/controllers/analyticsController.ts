@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../utils/prisma";
+import { getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates } from '../utils/redis';
 
 // Helper to get start/end of a day
 function getDayRange(date: Date) {
@@ -80,4 +81,36 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
     });
   }
   res.json({ success: true, data: weekData });
+};
+
+export const flushAnalytics = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const currentTabSession = await getCurrentTabSession(userId);
+    if (currentTabSession && currentTabSession.domain && currentTabSession.startTime) {
+      const duration = Math.floor((Date.now() - Number(currentTabSession.startTime)) / 1000);
+      if (duration > 0) {
+        await incrementTabAggregate(userId, currentTabSession.domain, duration);
+      }
+    }
+
+    const aggregates = await getTabAggregates(userId, today);
+    for (const [domain, seconds] of Object.entries(aggregates)) {
+      await prisma.tabUsage.upsert({
+        where: { userId_date_domain: { userId, date: new Date(today), domain } },
+        update: { seconds: { increment: Number(seconds) } },
+        create: { userId, date: new Date(today), domain, seconds: Number(seconds) }
+      });
+    }
+
+    await clearTabAggregates(userId, today);
+    await clearTabSession(userId);
+
+    return res.json({ success: true, flushed: aggregates });
+  } catch (error) {
+    console.error('Flush analytics error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };

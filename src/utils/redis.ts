@@ -36,6 +36,11 @@ export const getLatestTabData = async (userId: string) => {
   return data ? JSON.parse(data) : null;
 };
 
+export const clearLatestTabsData = async (userId: string) => {
+  await redis.del(`latest-tabs:${userId}`);
+};
+
+
 export const publishActiveTabUpdate = async (userId: string, tabData: any) => {
   await redis.publish(`active-tab-update:${userId}`, JSON.stringify(tabData));
 }
@@ -48,6 +53,10 @@ export const getActiveTabData = async (userId: string) => {
   const data = await redis.get(`active-tab:${userId}`);
   return data ? JSON.parse(data) : null;
 }
+
+export const clearActiveTabData = async (userId: string) => {
+  await redis.del(`active-tab:${userId}`);
+};
 
 export const subscribeToFriendsTabUpdates = async (userId: string) => {
   const friendships = await prisma.friendship.findMany({
@@ -133,7 +142,6 @@ export const incrementTabAggregate = async (userId: string, domain: string, seco
 };
 
 export const getTabAggregates = async (userId: string, date: string) => {
-  console.log(date)
   return await redis.hgetall(`tab-agg:${userId}:${date}`);
 };
 

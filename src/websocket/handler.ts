@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../utils/prisma";
-import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates, setActiveTabData } from "../utils/redis";
+import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates, setActiveTabData, clearActiveTabData, clearLatestTabsData } from "../utils/redis";
 import { setCurrentTabSession, getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates } from '../utils/redis';
 export const wsClients: Record<string, WebSocket> = {};
 
@@ -186,6 +186,8 @@ export function handleConnection(ws: WebSocket, req: any) {
             }
             await clearTabAggregates(user.id, today);
             await clearTabSession(user.id);
+            await clearActiveTabData(user.id);
+            await clearLatestTabsData(user.id);
         } else {
             console.log(`[WS] Unauthenticated user disconnected`);
         }

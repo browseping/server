@@ -21,6 +21,7 @@ export const getProfileByUsername = async (req: Request, res: Response) => {
         dobPrivacy: true,
         lastOnlinePrivacy: true,
         onlinePrivacy: true,
+        tabPrivacy: true,
       },
     });
 
