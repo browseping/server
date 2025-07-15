@@ -83,6 +83,64 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
   res.json({ success: true, data: weekData });
 };
 
+
+// GET /api/analytics/presence/hourly?days=7
+export const getHourlyPresence = async (req: Request, res: Response) => {
+  const userId = req.user.id;
+  const days = Number(req.query.days) || 7;
+  const now = new Date();
+
+  const hours = Array(24).fill(0);
+  let totalSeconds = 0;
+  let startDate: string | null = null;
+  let endDate: string | null = null;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - i);
+    const { start, end } = getDayRange(date);
+
+    if (!startDate) startDate = start.toISOString().slice(0, 10);
+    endDate = end.toISOString().slice(0, 10);
+
+    const sessions = await prisma.presenceSession.findMany({
+      where: {
+        userId,
+        startTime: { gte: start, lte: end }
+      }
+    });
+
+    for (const session of sessions) {
+      let s = new Date(session.startTime);
+      // let e = session.endTime ? new Date(session.endTime) : new Date();
+      let e = session.endTime ? new Date(session.endTime) : s;
+      if (e > end) e = end;
+      if (s < start) s = start;
+
+      while (s < e) {
+        const hour = s.getHours();
+        const nextHour = new Date(s);
+        nextHour.setHours(hour + 1, 0, 0, 0);
+        const segmentEnd = nextHour < e ? nextHour : e;
+        const seconds = Math.floor((segmentEnd.getTime() - s.getTime()) / 1000);
+        hours[hour] += seconds;
+        totalSeconds += seconds;
+        s = segmentEnd;
+      }
+    }
+  }
+
+  res.json({
+    success: true,
+    hours: hours.map((seconds, hour) => ({ hour, seconds })),
+    totalSeconds,
+    totalHours: +(totalSeconds / 3600).toFixed(2),
+    days,
+    startDate,
+    endDate
+  });
+};
+
 export const flushAnalytics = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;

@@ -12,6 +12,8 @@ import redis, {
   clearLatestTabsData
 } from '../utils/redis';
 
+const FLUSH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
 async function flushAllUsersAnalytics() {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -23,8 +25,12 @@ async function flushAllUsersAnalytics() {
     const currentTabSession = await getCurrentTabSession(userId);
     if (currentTabSession && currentTabSession.domain && currentTabSession.startTime) {
       const duration = Math.floor((Date.now() - Number(currentTabSession.startTime)) / 1000);
-      if (duration > 0) {
+
+      const maxValidSessionSeconds = FLUSH_INTERVAL_MS / 1000 + 300;
+      if (duration > 0 && duration <= maxValidSessionSeconds) {
         await incrementTabAggregate(userId, currentTabSession.domain, duration);
+      } else {
+        console.warn(`[AnalyticsWorker] Skipped invalid tab session ${currentTabSession.domain} for user ${userId}: duration=${duration}s`);
       }
     }
 
@@ -39,7 +45,7 @@ async function flushAllUsersAnalytics() {
 
     await clearTabAggregates(userId, today);
     await clearTabSession(userId);
-  
+    
     const activeTab = await getActiveTabData(userId);
     const online = await isUserOnline(userId);
     if (activeTab && activeTab.url) {
@@ -56,6 +62,6 @@ async function flushAllUsersAnalytics() {
 }
 
 export function startAnalyticsFlushWorker() {
-  setInterval(flushAllUsersAnalytics, 15 * 60 * 1000);  // Flush in every 15 minutes
+  setInterval(flushAllUsersAnalytics, FLUSH_INTERVAL_MS);
   flushAllUsersAnalytics();
 }
