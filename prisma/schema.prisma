@@ -45,6 +45,8 @@ model User {
 
   tabPrivacy  TabPrivacyLevel @default(friends_only)
 
+  totalOnlineSeconds Int   @default(0)
+
   // Friend relationships
   sentFriendRequests     FriendRequest[] @relation("Sender")
   receivedFriendRequests FriendRequest[] @relation("Receiver")
@@ -57,6 +59,8 @@ model User {
 
   tabSessions TabSession[]
   tabUsages   TabUsage[]
+
+  monthlyLeaderboards MonthlyLeaderboard[]
 
   @@map("users")
 }
@@ -139,4 +143,18 @@ model TabUsage {
   @@unique([userId, date, domain])
   @@index([userId, date])
   @@map("tab_usage")
+}
+
+model MonthlyLeaderboard {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  month     String   // e.g. "2025-07"
+  seconds   Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, month])
+  @@index([month, seconds])
+  @@map("monthly_leaderboard")
 }

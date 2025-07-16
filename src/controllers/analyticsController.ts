@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import prisma from "../utils/prisma";
-import { getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates } from '../utils/redis';
+import { getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates, getCurrentPresenceSession, incrementPresenceAggregate, getPresenceAggregate, clearPresenceSession, clearPresenceAggregate } from '../utils/redis';
+import { flushPresenceForUser } from '../utils/flushPresence';
+import { flushTabUsageForUser } from "../utils/flushTabUsage";
+import { wsClients } from '../websocket/handler';
 
 // Helper to get start/end of a day
 function getDayRange(date: Date) {
@@ -144,29 +147,15 @@ export const getHourlyPresence = async (req: Request, res: Response) => {
 export const flushAnalytics = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
-    const today = new Date().toISOString().slice(0, 10);
-
-    const currentTabSession = await getCurrentTabSession(userId);
-    if (currentTabSession && currentTabSession.domain && currentTabSession.startTime) {
-      const duration = Math.floor((Date.now() - Number(currentTabSession.startTime)) / 1000);
-      if (duration > 0) {
-        await incrementTabAggregate(userId, currentTabSession.domain, duration);
-      }
+    let presenceSessionId = null;
+    const ws = wsClients[userId];
+    if (ws) {
+      presenceSessionId = (ws as any).presenceSessionId;
     }
+    await flushPresenceForUser(userId, undefined, undefined, presenceSessionId);
+    await flushTabUsageForUser(userId);
 
-    const aggregates = await getTabAggregates(userId, today);
-    for (const [domain, seconds] of Object.entries(aggregates)) {
-      await prisma.tabUsage.upsert({
-        where: { userId_date_domain: { userId, date: new Date(today), domain } },
-        update: { seconds: { increment: Number(seconds) } },
-        create: { userId, date: new Date(today), domain, seconds: Number(seconds) }
-      });
-    }
-
-    await clearTabAggregates(userId, today);
-    await clearTabSession(userId);
-
-    return res.json({ success: true, flushed: aggregates });
+    return res.json({ success: true });
   } catch (error) {
     console.error('Flush analytics error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

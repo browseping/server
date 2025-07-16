@@ -2,7 +2,9 @@ import { WebSocket } from "ws";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../utils/prisma";
 import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, setLatestTabData, publishActiveTabUpdate, subscribeToFriendsTabUpdates, setActiveTabData, clearActiveTabData, clearLatestTabsData } from "../utils/redis";
-import { setCurrentTabSession, getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTabSession, clearTabAggregates } from '../utils/redis';
+import { setCurrentTabSession, getCurrentTabSession, incrementTabAggregate, setCurrentPresenceSession } from '../utils/redis';
+import { flushPresenceForUser } from '../utils/flushPresence';
+import { flushTabUsageForUser } from "../utils/flushTabUsage";
 export const wsClients: Record<string, WebSocket> = {};
 
 export function handleConnection(ws: WebSocket, req: any) {
@@ -14,7 +16,7 @@ export function handleConnection(ws: WebSocket, req: any) {
     function refreshPresence() {
         if (user) {
             setUserOnline(user.id, HEARTBEAT_TTL);
-            console.log(`[WS] ${user.id}: Presence refreshed (TTL ${HEARTBEAT_TTL}s)`);
+            // console.log(`[WS] ${user.id}: Presence refreshed (TTL ${HEARTBEAT_TTL}s)`);
             publishPresence(user.id, 'online');
         }
     }
@@ -58,6 +60,8 @@ export function handleConnection(ws: WebSocket, req: any) {
                             ws.close();
                         }
                     }, HEARTBEAT_EXPECTED);
+
+                    await setCurrentPresenceSession(user.id, Date.now());
                 } catch (err) {
                     ws.send(JSON.stringify({ type: "auth", success: false, error: "Invalid token" }));
                     ws.close();
@@ -76,7 +80,7 @@ export function handleConnection(ws: WebSocket, req: any) {
                 lastPing = Date.now();
                 ws.send(JSON.stringify({ type: "pong", ts: Date.now() }));
                 refreshPresence();
-                console.log(`[WS] ${user.id}: Received ping at ${new Date().toISOString()}`);
+                // console.log(`[WS] ${user.id}: Received ping at ${new Date().toISOString()}`);
                 return;
 
             }
@@ -90,7 +94,7 @@ export function handleConnection(ws: WebSocket, req: any) {
                 };
                 publishAllTabsUpdtate(user.id, tabPayload);
                 setLatestTabData(user.id, data.tabs);
-                console.log(`[WS] ${user.id}: Published all tabs update`, data.tabs);
+                // console.log(`[WS] ${user.id}: Published all tabs update`, data.tabs);
                 return;
             }
 
@@ -114,7 +118,7 @@ export function handleConnection(ws: WebSocket, req: any) {
                 };
                 publishActiveTabUpdate(user.id, tabPayload);
                 setActiveTabData(user.id, data.tab);
-                console.log(`[WS] ${user.id}: Published active tab update`, data.tab);
+                // console.log(`[WS] ${user.id}: Published active tab update`, data.tab);
                 return;
             }
         } catch (err) {
@@ -131,33 +135,7 @@ export function handleConnection(ws: WebSocket, req: any) {
             await setUserOffline(user.id);
             await publishPresence(user.id, 'offline');
 
-            // Try to use sessionId from ws object
             let sessionId = (ws as any).presenceSessionId;
-            if (sessionId) {
-                const session = await prisma.presenceSession.findUnique({ where: { id: sessionId } });
-                if (session && !session.endTime) {
-                    const endTime = new Date();
-                    const duration = Math.floor((endTime.getTime() - session.startTime.getTime()) / 1000);
-                    await prisma.presenceSession.update({
-                        where: { id: sessionId },
-                        data: { endTime, duration }
-                    });
-                }
-            } else {
-                // Fallback: find the latest open session
-                const openSession = await prisma.presenceSession.findFirst({
-                    where: { userId: user.id, endTime: null },
-                    orderBy: { startTime: 'desc' }
-                });
-                if (openSession) {
-                    const endTime = new Date();
-                    const duration = Math.floor((endTime.getTime() - openSession.startTime.getTime()) / 1000);
-                    await prisma.presenceSession.update({
-                        where: { id: openSession.id },
-                        data: { endTime, duration }
-                    });
-                }
-            }
 
             await prisma.user.update({
                 where: { id: user.id },
@@ -165,29 +143,12 @@ export function handleConnection(ws: WebSocket, req: any) {
             });
             console.log(`[WS] ${user.id}: Disconnected and set offline`);
 
-            const currentTabSession = await getCurrentTabSession(user.id);
-            if (currentTabSession && currentTabSession.domain && currentTabSession.startTime) {
-                const now = Date.now();
-                const duration = Math.floor((now - Number(currentTabSession.startTime)) / 1000);
-                if (duration > 0) {
-                    const today = new Date().toISOString().slice(0, 10);
-                    await incrementTabAggregate(user.id, currentTabSession.domain, duration);
-                }
-            }
-            const today = new Date().toISOString().slice(0, 10);
-            const aggregates = await getTabAggregates(user.id, today);
-            console.log(`[WS] ${user.id}: Aggregates for today`, aggregates);
-            for (const [domain, seconds] of Object.entries(aggregates)) {
-                await prisma.tabUsage.upsert({
-                    where: { userId_date_domain: { userId: user.id, date: new Date(today), domain } },
-                    update: { seconds: { increment: Number(seconds) } },
-                    create: { userId: user.id, date: new Date(today), domain, seconds: Number(seconds) }
-                });
-            }
-            await clearTabAggregates(user.id, today);
-            await clearTabSession(user.id);
+            await flushTabUsageForUser(user.id);
+
             await clearActiveTabData(user.id);
             await clearLatestTabsData(user.id);
+
+            await flushPresenceForUser(user.id, undefined, undefined, sessionId);
         } else {
             console.log(`[WS] Unauthenticated user disconnected`);
         }

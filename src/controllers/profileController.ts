@@ -16,6 +16,7 @@ export const getProfileByUsername = async (req: Request, res: Response) => {
         createdAt: true,
         lastOnlineAt: true,
         email: true,
+        totalOnlineSeconds: true,
         emailPrivacy: true,
         dateOfBirth: true,
         dobPrivacy: true,

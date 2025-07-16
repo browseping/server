@@ -152,4 +152,33 @@ export const clearTabAggregates = async (userId: string, date: string) => {
   await redis.del(`tab-agg:${userId}:${date}`);
 };
 
+// Presence Session and Aggregates Functions
+
+export const setCurrentPresenceSession = async (userId: string, startTime: number) => {
+  await redis.hmset(`presence-session:${userId}`, { startTime });
+};
+
+export const getCurrentPresenceSession = async (userId: string) => {
+  const session = await redis.hgetall(`presence-session:${userId}`);
+  return session && session.startTime ? session : null;
+};
+
+export const clearPresenceSession = async (userId: string) => {
+  await redis.del(`presence-session:${userId}`);
+};
+
+export const incrementPresenceAggregate = async (userId: string, seconds: number) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await redis.incrby(`presence-agg:${userId}:${today}`, seconds);
+};
+
+export const getPresenceAggregate = async (userId: string, date: string) => {
+  const seconds = await redis.get(`presence-agg:${userId}:${date}`);
+  return seconds ? Number(seconds) : 0;
+};
+
+export const clearPresenceAggregate = async (userId: string, date: string) => {
+  await redis.del(`presence-agg:${userId}:${date}`);
+};
+
 export default redis;
