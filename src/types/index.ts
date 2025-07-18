@@ -1,12 +1,12 @@
 export interface SignupRequest {
   username: string;
   password: string;
-  email?: string;
+  email: string;
   displayName?: string;
 }
 
 export interface LoginRequest {
-  username: string;
+  identifier: string;
   password: string;
 }
 

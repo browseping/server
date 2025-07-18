@@ -9,32 +9,32 @@ export const getProfileByUsername = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
-      select: {
-        id: true,
-        username: true,
-        displayName: true,
-        createdAt: true,
-        lastOnlineAt: true,
-        email: true,
-        totalOnlineSeconds: true,
-        emailPrivacy: true,
-        dateOfBirth: true,
-        dobPrivacy: true,
-        lastOnlinePrivacy: true,
-        onlinePrivacy: true,
-        tabPrivacy: true,
-      },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+    
+    const { password, ...userWithoutPassword } = user;
 
     if (requesterId === user.id) {
       const online = await isUserOnline(user.id);
       return res.json({
         success: true,
-        data: { ...user, isOnline: online },
+        data: {
+          ...userWithoutPassword,
+          isOnline: online,
+          socialMedia: {
+            twitter: user.twitter,
+            linkedin: user.linkedin,
+            instagram: user.instagram,
+            github: user.github,
+            website: user.website,
+            telegram: user.telegram,
+            snapchat: user.snapchat,
+            discord: user.discord,
+          }
+        },
       });
     }
 
@@ -49,52 +49,50 @@ export const getProfileByUsername = async (req: Request, res: Response) => {
       isFriend = !!friendship;
     }
 
-    let showLastOnline = false;
-    let showOnline = false;
-
-    if (user.lastOnlinePrivacy === 'public') {
-      showLastOnline = true;
-    } else if (user.lastOnlinePrivacy === 'friends_only' && isFriend) {
-      showLastOnline = true;
-    }
-
-    if (user.onlinePrivacy === 'public') {
-      showOnline = true;
-    } else if (user.onlinePrivacy === 'friends_only' && isFriend) {
-      showOnline = true;
-    }
-
     const profile: any = {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
       createdAt: user.createdAt,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      totalOnlineSeconds: user.totalOnlineSeconds,
     };
 
-    if (
-      user.email &&
-      (user.emailPrivacy === 'public' ||
-        (user.emailPrivacy === 'friends_only' && isFriend))
-    ) {
+    if (user.email && 
+        (user.emailPrivacy === 'public' || 
+         (user.emailPrivacy === 'friends_only' && isFriend))) {
       profile.email = user.email;
     }
-    if (user.emailPrivacy === 'private') {
-      if (requesterId === user.id) profile.email = user.email;
-    }
 
-    if (
-      user.dateOfBirth &&
-      (user.dobPrivacy === 'public' ||
-        (user.dobPrivacy === 'friends_only' && isFriend))
-    ) {
+    if (user.dateOfBirth && 
+        (user.dobPrivacy === 'public' || 
+         (user.dobPrivacy === 'friends_only' && isFriend))) {
       profile.dateOfBirth = user.dateOfBirth;
     }
 
-    if (showLastOnline) {
+    if (user.lastOnlinePrivacy === 'public' || 
+        (user.lastOnlinePrivacy === 'friends_only' && isFriend)) {
       profile.lastOnlineAt = user.lastOnlineAt;
     }
-    if (showOnline) {
+
+    if (user.onlinePrivacy === 'public' || 
+        (user.onlinePrivacy === 'friends_only' && isFriend)) {
       profile.isOnline = await isUserOnline(user.id);
+    }
+
+    if (user.socialMediaPrivacy === 'public' || 
+        (user.socialMediaPrivacy === 'friends_only' && isFriend)) {
+      profile.socialMedia = {
+        twitter: user.twitter,
+        linkedin: user.linkedin,
+        instagram: user.instagram,
+        github: user.github,
+        website: user.website,
+        telegram: user.telegram,
+        snapchat: user.snapchat,
+        discord: user.discord,
+      };
     }
 
     return res.json({ success: true, data: profile });
@@ -113,6 +111,8 @@ export const updatePrivacySettings = async (req: Request, res: Response) => {
       tabPrivacy,
       emailPrivacy,
       dobPrivacy,
+      socialMediaPrivacy,
+      friendsListPrivacy,
     } = req.body;
 
     const updated = await prisma.user.update({
@@ -123,6 +123,8 @@ export const updatePrivacySettings = async (req: Request, res: Response) => {
         ...(tabPrivacy && { tabPrivacy }),
         ...(emailPrivacy && { emailPrivacy }),
         ...(dobPrivacy && { dobPrivacy }),
+        ...(socialMediaPrivacy && { socialMediaPrivacy }),
+        ...(friendsListPrivacy && { friendsListPrivacy }),
       },
       select: {
         id: true,
@@ -131,6 +133,8 @@ export const updatePrivacySettings = async (req: Request, res: Response) => {
         tabPrivacy: true,
         emailPrivacy: true,
         dobPrivacy: true,
+        socialMediaPrivacy: true,
+        friendsListPrivacy: true,
       }
     });
 

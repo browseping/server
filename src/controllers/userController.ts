@@ -11,8 +11,8 @@ export const signup = async (req: Request, res: Response) => {
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { username },
-          { email: email ? email : undefined }
+          { username: username },
+          { email: email }
         ]
       }
     });
@@ -57,17 +57,28 @@ export const signup = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { username, password }: LoginRequest = req.body;
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing credentials',
+        error: 'Username/email and password are required'
+      });
+    }
+
+    const isEmail = identifier.includes('@');
     
     const user = await prisma.user.findUnique({
-      where: { username }
+      where: isEmail 
+        ? { email: identifier }
+        : { username: identifier }
     });
     
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Authentication failed',
-        error: 'Invalid username or password'
+        error: 'Invalid credentials'
       });
     }
 
@@ -77,7 +88,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         message: 'Authentication failed',
-        error: 'Invalid username or password'
+        error: 'Invalid credentials'
       });
     }
     

@@ -29,23 +29,34 @@ model User {
   id             String   @id @default(uuid())
   username       String   @unique
   password       String
-  email          String?  @unique
-  emailPrivacy   PrivacyLevel @default(friends_only)
+  email          String   @unique
   displayName    String?
+  bio            String?  @db.Text
+  avatarUrl      String?
+  dateOfBirth    DateTime?
+  totalOnlineSeconds Int @default(0)
+  lastOnlineAt   DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  lastOnlineAt   DateTime @default(now())
-  privacyLevel   String   @default("friends-only")
 
+  // Privacy settings
+  emailPrivacy   PrivacyLevel @default(friends_only)
+  dobPrivacy     PrivacyLevel @default(private)
   onlinePrivacy  PrivacyLevel @default(public)
-  lastOnlinePrivacy PrivacyLevel  @default(friends_only)
+  lastOnlinePrivacy PrivacyLevel @default(friends_only)
+  tabPrivacy     TabPrivacyLevel @default(friends_only)
+  friendsListPrivacy PrivacyLevel @default(friends_only)
 
-  dateOfBirth    DateTime?
-  dobPrivacy     PrivacyLevel? @default(private)
-
-  tabPrivacy  TabPrivacyLevel @default(friends_only)
-
-  totalOnlineSeconds Int   @default(0)
+  // Social media links
+  twitter        String?
+  linkedin       String?
+  instagram      String?
+  github         String?
+  website        String?
+  telegram       String?
+  snapchat       String?
+  discord        String?
+  socialMediaPrivacy PrivacyLevel @default(friends_only)
 
   // Friend relationships
   sentFriendRequests     FriendRequest[] @relation("Sender")
