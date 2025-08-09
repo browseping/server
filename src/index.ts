@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import { userRoutes, friendRoutes, profileRoutes, analyticsRoutes, leaderboardRoutes } from './routes';
+import { userRoutes,
+  friendRoutes,
+  profileRoutes,
+  analyticsRoutes,
+  leaderboardRoutes,
+  conversationRoutes } from './routes';
 import http from 'http';
 import { initializeWebSocketServer } from './websocket/server';
 import { startAnalyticsFlushWorker } from './workers/analyticsFlushWorker';
@@ -18,6 +23,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/conversation', conversationRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

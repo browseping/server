@@ -25,6 +25,17 @@ enum TabPrivacyLevel {
   private
 }
 
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum ParticipantStatus {
+  ACCEPTED
+  PENDING
+  BLOCKED
+}
+
 model User {
   id             String   @id @default(uuid())
   username       String   @unique
@@ -72,6 +83,11 @@ model User {
   tabUsages   TabUsage[]
 
   monthlyLeaderboards MonthlyLeaderboard[]
+
+  // Conversations
+  conversations          ConversationParticipant[]
+  sentMessages           Message[]
+  messageReadReceipts    MessageReadReceipt[]
 
   @@map("users")
 }
@@ -168,4 +184,73 @@ model MonthlyLeaderboard {
   @@unique([userId, month])
   @@index([month, seconds])
   @@map("monthly_leaderboard")
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  type           ConversationType @default(DIRECT)
+  name           String? // For group name
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lastMessageId  String?
+  lastMessage    Message? @relation("LastMessage", fields: [lastMessageId], references: [id])
+
+  participants   ConversationParticipant[]
+  messages       Message[] @relation("ConversationMessages")
+}
+
+model ConversationParticipant {
+  id                String   @id @default(uuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status            ParticipantStatus   @default(PENDING)
+  invitedBy         String?
+  lastSeenMessageId String?
+  unreadCount       Int      @default(0)
+  joinedAt          DateTime @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversation   Conversation @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+
+  content        String
+  createdAt      DateTime @default(now())
+
+  seenAt         DateTime?
+
+  expiresAt      DateTime?
+  isEphemeral    Boolean  @default(true)
+  isSaved        Boolean  @default(false)
+  deletedForAll  Boolean  @default(false)
+
+  readReceipts   MessageReadReceipt[]
+
+  lastMessageIn  Conversation[] @relation("LastMessage")
+
+  @@index([conversationId, createdAt])
+  @@index([expiresAt])
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
 }
