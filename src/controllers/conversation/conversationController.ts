@@ -100,7 +100,7 @@ export const getMessages = async (req: Request, res: Response) => {
 
         return res.status(200).json({
             success: true,
-            messages: messages.reverse(),
+            data: messages.reverse(),
             canReply: participiant.status === 'ACCEPTED'
         });
     } catch (error) {
@@ -111,3 +111,109 @@ export const getMessages = async (req: Request, res: Response) => {
         });
     }
 }
+
+// Accept conversation/group invite
+export const acceptConversationInvite = async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      }
+    });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    if (participant.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invitation is not pending'
+      });
+    }
+
+    await prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      },
+      data: {
+        status: 'ACCEPTED'
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Invitation accepted'
+    });
+
+  } catch (error) {
+    console.error('Accept conversation invite error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+export const rejectConversationInvite = async (req: Request, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      }
+    });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    if (participant.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invitation is not pending'
+      });
+    }
+
+    await prisma.conversationParticipant.delete({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId
+        }
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Invitation rejected'
+    });
+
+  } catch (error) {
+    console.error('Reject conversation invite error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
