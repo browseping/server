@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { isUserOnline, getActiveTabData, getLatestTabData } from '../utils/redis';
+import { notifyFriendRequestReceived, notifyFriendRequestAccepted } from '../services/notificationService';
 
 // Send a friend request
 export const sendFriendRequest = async (req: Request, res: Response) => {
   try {
     const senderId = req.user.id;
-    
     const { receiverId } = req.body;
     
     if (!receiverId) {
@@ -81,6 +81,10 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
           ]
         });
         
+
+        await notifyFriendRequestAccepted(receiverId, senderId);
+        await notifyFriendRequestAccepted(senderId, receiverId);
+        
         return res.status(200).json({
           success: true,
           message: 'Friend request automatically accepted',
@@ -117,6 +121,8 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         status: 'pending'
       }
     });
+
+    await notifyFriendRequestReceived(receiverId, senderId, friendRequest.id);
     
     return res.status(201).json({
       success: true,
@@ -181,6 +187,8 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
       ],
       skipDuplicates: true,
     });
+
+    await notifyFriendRequestAccepted(friendRequest.senderId, userId);
 
     return res.json({
       success: true,

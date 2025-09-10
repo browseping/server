@@ -5,6 +5,8 @@ import { setUserOnline, setUserOffline, publishPresence, publishAllTabsUpdtate, 
 import { setCurrentTabSession, getCurrentTabSession, incrementTabAggregate, setCurrentPresenceSession } from '../utils/redis';
 import { flushPresenceForUser } from '../utils/flushPresence';
 import { flushTabUsageForUser } from "../utils/flushTabUsage";
+import { notifyFriendsUserOnline } from "../services/notificationService";
+
 export const wsClients: Record<string, WebSocket> = {};
 
 export function handleConnection(ws: WebSocket, req: any) {
@@ -39,6 +41,8 @@ export function handleConnection(ws: WebSocket, req: any) {
 
                     setUserOnline(user.id);
                     publishPresence(user.id, 'online');
+                    await notifyFriendsUserOnline(user.id);
+                    
                     refreshPresence();
                     subscribeToFriendsTabUpdates(user.id);
 
