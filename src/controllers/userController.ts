@@ -3,10 +3,22 @@ import prisma from '../utils/prisma';
 import { SignupRequest, LoginRequest, ApiResponse } from '../types';
 import bcrypt from 'bcrypt';
 import { generateToken } from '../utils/jwt';
+import { isEmailVerified, clearEmailVerification } from '../utils/redis';
 
 export const signup = async (req: Request, res: Response) => {
   try {
     const { username, password, email, displayName }: SignupRequest = req.body;
+    
+    if (email) {
+      const verified = await isEmailVerified(email);
+      if (!verified) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email not verified',
+          error: 'Please verify your email before signing up'
+        });
+      }
+    }
     
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -35,6 +47,11 @@ export const signup = async (req: Request, res: Response) => {
         displayName: displayName || username
       }
     });
+
+    // Clear email verification after successful signup
+    if (email) {
+      await clearEmailVerification(email);
+    }
     
     const { password: _, ...userWithoutPassword } = newUser;
     

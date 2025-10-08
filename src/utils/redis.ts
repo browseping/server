@@ -181,4 +181,74 @@ export const clearPresenceAggregate = async (userId: string, date: string) => {
   await redis.del(`presence-agg:${userId}:${date}`);
 };
 
+// OTP Functions
+
+export const generateOTP = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const storeOTP = async (email: string, otp: string) => {
+  // Store OTP with 5-minute expiry
+  await redis.setex(`otp:${email}`, 300, otp);
+};
+
+export const verifyOTP = async (email: string, inputOtp: string): Promise<boolean> => {
+  const storedOtp = await redis.get(`otp:${email}`);
+  return storedOtp === inputOtp;
+};
+
+export const deleteOTP = async (email: string) => {
+  await redis.del(`otp:${email}`);
+};
+
+export const checkOTPAttempts = async (email: string): Promise<number> => {
+  const attempts = await redis.get(`otp:attempts:${email}`);
+  return attempts ? parseInt(attempts) : 0;
+};
+
+export const incrementOTPAttempts = async (email: string) => {
+  const key = `otp:attempts:${email}`;
+  const current = await redis.incr(key);
+  if (current === 1) {
+    await redis.expire(key, 3600);
+  }
+  return current;
+};
+
+export const resetOTPAttempts = async (email: string) => {
+  await redis.del(`otp:attempts:${email}`);
+};
+
+export const checkOTPVerificationAttempts = async (email: string): Promise<number> => {
+  const attempts = await redis.get(`otp:verify_attempts:${email}`);
+  return attempts ? parseInt(attempts) : 0;
+};
+
+export const incrementOTPVerificationAttempts = async (email: string) => {
+  const key = `otp:verify_attempts:${email}`;
+  const current = await redis.incr(key);
+  if (current === 1) {
+    // Set expiry for 10 minutes
+    await redis.expire(key, 600);
+  }
+  return current;
+};
+
+export const resetOTPVerificationAttempts = async (email: string) => {
+  await redis.del(`otp:verify_attempts:${email}`);
+};
+
+export const markEmailVerified = async (email: string) => {
+  await redis.setex(`otp:verified:${email}`, 600, 'true');
+};
+
+export const isEmailVerified = async (email: string): Promise<boolean> => {
+  const verified = await redis.get(`otp:verified:${email}`);
+  return verified === 'true';
+};
+
+export const clearEmailVerification = async (email: string) => {
+  await redis.del(`otp:verified:${email}`);
+};
+
 export default redis;

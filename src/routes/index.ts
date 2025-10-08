@@ -5,6 +5,7 @@ import analyticsRoutes from './analyticsRoutes';
 import leaderboardRoutes from './leaderboardRoutes';
 import conversationRoutes from './conversationRoutes';
 import notificationRoutes from './notificationRoutes';
+import otpRoutes from './otpRoutes';
 
 export { 
     userRoutes,
@@ -13,5 +14,6 @@ export {
     analyticsRoutes,
     leaderboardRoutes,
     conversationRoutes,
-    notificationRoutes
+    notificationRoutes,
+    otpRoutes
 };
