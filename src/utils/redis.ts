@@ -239,7 +239,7 @@ export const resetOTPVerificationAttempts = async (email: string) => {
 };
 
 export const markEmailVerified = async (email: string) => {
-  await redis.setex(`otp:verified:${email}`, 600, 'true');
+  await redis.setex(`otp:verified:${email}`, 300, 'true');
 };
 
 export const isEmailVerified = async (email: string): Promise<boolean> => {

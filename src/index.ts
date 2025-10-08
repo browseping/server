@@ -7,7 +7,8 @@ import { userRoutes,
   leaderboardRoutes,
   conversationRoutes,
   notificationRoutes,
-  otpRoutes } from './routes';
+  otpRoutes,
+  forgotPasswordRoutes } from './routes';
 import http from 'http';
 import { initializeWebSocketServer } from './websocket/server';
 import { startAnalyticsFlushWorker } from './workers/analyticsFlushWorker';
@@ -28,6 +29,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/conversation', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/forgot-password', forgotPasswordRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
