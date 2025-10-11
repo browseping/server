@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { SignupRequest, LoginRequest } from '../types/index';
 
-const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/;
-const consecutiveUnderscore = /__+/;
-const startsOrEndsWithUnderscore = /^_|_$/;
+const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{3,15}$/;
+const consecutiveSpecialChars = /[_-]{2,}/;
+const startsOrEndsWithSpecialChars = /^[_-]|[_-]$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const validateSignup = (req: Request, res: Response, next: NextFunction) => {
@@ -20,14 +20,14 @@ export const validateSignup = (req: Request, res: Response, next: NextFunction) 
     return res.status(400).json({
       success: false,
       message: 'Invalid username',
-      error: 'Username must start with a letter and be 4-15 characters, only letters, digits, and underscores allowed'
+      error: 'Username must start with a letter and be 4-15 characters, only letters, digits, underscores, and hyphens allowed'
     });
   }
-  if (consecutiveUnderscore.test(username) || startsOrEndsWithUnderscore.test(username)) {
+  if (consecutiveSpecialChars.test(username) || startsOrEndsWithSpecialChars.test(username)) {
     return res.status(400).json({
       success: false,
       message: 'Invalid username',
-      error: 'Underscore cannot be at the start/end or used consecutively'
+      error: 'Underscores and hyphens cannot be at the start/end or used consecutively'
     });
   }
   if (/\s/.test(username)) {

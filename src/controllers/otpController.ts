@@ -155,7 +155,7 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       data: {
         email,
         verified: true,
-        validFor: 600 // 10 minutes
+        validFor: 300 // 5 minutes
       }
     });
 
