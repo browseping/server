@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { SignupRequest, LoginRequest, ApiResponse } from '../types';
 import bcrypt from 'bcrypt';
-import { generateToken } from '../utils/jwt';
+import { generateToken, generateSessionId } from '../utils/jwt';
 import { isEmailVerified, clearEmailVerification } from '../utils/redis';
 
 export const signup = async (req: Request, res: Response) => {
@@ -109,12 +109,23 @@ export const login = async (req: Request, res: Response) => {
       });
     }
     
+    const sessionId = generateSessionId();
+    
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        sessionId: sessionId,
+        lastOnlineAt: new Date()
+      }
+    });
+    
     const token = generateToken({ 
       id: user.id,
-      username: user.username
+      username: user.username,
+      sessionId: sessionId
     });
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, sessionId: _sessionId, ...userWithoutPassword } = user;
     
     const response: ApiResponse<any> = {
       success: true,
@@ -178,6 +189,29 @@ export const searchUsers = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
+    });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    
+    await prisma.user.update({
+      where: { id: userId },
+      data: { sessionId: null }
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: 'Failed to logout'
     });
   }
 };
