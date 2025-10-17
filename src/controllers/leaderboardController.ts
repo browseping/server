@@ -133,6 +133,62 @@ export const getTopUsers = async (req: Request, res: Response) => {
   }
 };
 
+// GET /api/leaderboard/public-top?month=2025-07
+export const getPublicTopUsers = async (req: Request, res: Response) => {
+  try {
+    const { month } = req.query;
+    
+    const targetMonth = month ? String(month) : new Date().toISOString().slice(0, 7);
+
+    const limit = 15;
+    
+    const totalUsers = await prisma.monthlyLeaderboard.count({
+      where: { month: targetMonth }
+    });
+    
+    const topUsers = await prisma.monthlyLeaderboard.findMany({
+      where: { month: targetMonth },
+      orderBy: { seconds: 'desc' },
+      take: limit,
+      include: {
+        user: {
+          select: {
+            username: true,
+            displayName: true,
+            totalOnlineSeconds: true
+          }
+        }
+      }
+    });
+    
+    const leaderboard = topUsers.map((entry, index) => ({
+      rank: index + 1,
+      userId: entry.userId,
+      username: entry.user.username,
+      displayName: entry.user.displayName,
+      monthlySeconds: entry.seconds,
+      monthlyHours: +(entry.seconds / 3600).toFixed(2),
+      totalOnlineHours: +(entry.user.totalOnlineSeconds / 3600).toFixed(2)
+    }));
+    
+    return res.json({
+      success: true,
+      data: {
+        month: targetMonth,
+        leaderboard,
+        totalUsers: totalUsers
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get public top users error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 // GET /api/leaderboard/user-position?month=2025-07&userId=...
 export const getUserPosition = async (req: Request, res: Response) => {
   try {
