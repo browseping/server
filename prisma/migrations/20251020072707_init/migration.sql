@@ -30,6 +30,7 @@ CREATE TABLE "users" (
     "lastOnlineAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "sessionId" TEXT,
     "emailPrivacy" "PrivacyLevel" NOT NULL DEFAULT 'friends_only',
     "dobPrivacy" "PrivacyLevel" NOT NULL DEFAULT 'private',
     "onlinePrivacy" "PrivacyLevel" NOT NULL DEFAULT 'public',
