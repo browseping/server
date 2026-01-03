@@ -1,0 +1,88 @@
+name: Ask a Question
+description: Have a question? We're here to help
+title: "[QUESTION] "
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about BrowsePing? Ask the community!
+        
+        **Other Ways to Get Help:**
+        - [Discord Community](https://discord.gg/GdhXuEAZ)
+        - [Email Support](mailto:support@browseping.com)
+        - [Documentation](https://github.com/browseping/server#readme)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: How do I...? / What is...? / Why does...?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context about your question
+      placeholder: I'm trying to... and I'm having trouble with...
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: What Have You Tried?
+      description: What have you already attempted or researched?
+      placeholder: |
+        - Checked the documentation at...
+        - Searched for similar issues
+        - Tried implementing...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      description: What area is your question about?
+      options:
+        - Installation / Setup
+        - Development
+        - Deployment
+        - Database
+        - API
+        - WebSocket
+        - Authentication
+        - Configuration
+        - Performance
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Your Environment
+      description: Relevant environment details
+      placeholder: |
+        - Node.js: 20.x
+        - OS: Linux / Windows / macOS
+        - Database: MySQL 8.0
+        - Redis: 7.x
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have read the documentation
+          required: false
+        - label: I have checked existing issues for similar questions
+          required: false
+        - label: I have provided enough context for someone to help
+          required: false

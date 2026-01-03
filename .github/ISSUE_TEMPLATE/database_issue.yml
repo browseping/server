@@ -1,0 +1,131 @@
+name: Report a Database Issue
+description: Problem with database operations, migrations, or schema
+title: "[DATABASE] "
+labels: ["database", "bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report issues related to database operations, Prisma migrations, or data integrity.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What's the database issue?
+      placeholder: The database operation fails when...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What type of database issue is this?
+      options:
+        - Migration failure
+        - Query error
+        - Connection issue
+        - Data corruption
+        - Performance problem
+        - Schema issue
+        - Constraint violation
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-message
+    attributes:
+      label: Error Message
+      description: What error are you seeing?
+      render: bash
+      placeholder: |
+        Error: UNIQUE constraint failed: users.email
+        at Database.execute (/path/to/file.ts:123)
+    validations:
+      required: false
+
+  - type: textarea
+    id: prisma-command
+    attributes:
+      label: Prisma Command Run
+      description: Which prisma command were you running?
+      placeholder: |
+        npx prisma migrate deploy
+        npx prisma db push
+        npx prisma generate
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected-table
+    attributes:
+      label: Affected Table(s)
+      description: Which database table(s) are involved?
+      placeholder: |
+        - users
+        - messages
+        - friendships
+    validations:
+      required: false
+
+  - type: textarea
+    id: migration-details
+    attributes:
+      label: Migration Details
+      description: If it's a migration issue, provide migration details
+      placeholder: |
+        Migration name: add_user_status
+        Status: Pending / Failed
+        Error: Column 'status' already exists
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Run migration X
+        2. Insert data with Y constraint
+        3. Operation fails with error...
+    validations:
+      required: false
+
+  - type: textarea
+    id: database-info
+    attributes:
+      label: Database Information
+      description: Database and environment details
+      placeholder: |
+        - Database: MySQL 8.0
+        - Prisma: 6.x
+        - Node.js: 20.x
+        - Database size: 50GB
+    validations:
+      required: false
+
+  - type: textarea
+    id: data-backup
+    attributes:
+      label: Data Backup
+      description: Have you backed up your data? How did you back it up?
+      placeholder: |
+        Yes - mysqldump -u root -p browseping > backup.sql
+        Or no, help us prevent data loss
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have backed up my database before reporting this
+          required: false
+        - label: I have checked prisma/schema.prisma for issues
+          required: false
+        - label: I have cleared node_modules and reinstalled dependencies
+          required: false

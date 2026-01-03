@@ -1,0 +1,113 @@
+name: Report a Performance Issue
+description: The server is slow or resource intensive
+title: "[PERFORMANCE] "
+labels: ["performance", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report performance issues, slowdowns, or high resource usage.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What performance issue are you experiencing?
+      placeholder: The server is slow when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-endpoint
+    attributes:
+      label: Affected Endpoint(s)
+      description: Which endpoint(s) are affected?
+      placeholder: |
+        POST /api/messages
+        GET /api/analytics
+    validations:
+      required: false
+
+  - type: textarea
+    id: performance-metrics
+    attributes:
+      label: Performance Metrics
+      description: How slow is it? What are the metrics?
+      placeholder: |
+        - Response time: 5000ms (should be <500ms)
+        - Memory usage: 2GB (should be <1GB)
+        - CPU usage: 90% (should be <50%)
+        - Database query time: 2000ms
+    validations:
+      required: false
+
+  - type: textarea
+    id: load-details
+    attributes:
+      label: Load Details
+      description: What's the load scenario when this happens?
+      placeholder: |
+        - Active users: 1000
+        - Requests per second: 500
+        - Database connections: 100/100 (maxed out)
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this performance issue?
+      placeholder: |
+        1. Run load test with 1000 concurrent users
+        2. Send requests to /api/v1/analytics
+        3. Observe response times spike to 5000ms
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact
+      description: How severely does this affect the system?
+      options:
+        - Critical (System unavailable)
+        - High (Major slowdown)
+        - Medium (Noticeable degradation)
+        - Low (Minor performance loss)
+    validations:
+      required: false
+
+  - type: textarea
+    id: server-resources
+    attributes:
+      label: Server Resources
+      description: What are the server specs?
+      placeholder: |
+        - CPU: 4 cores
+        - Memory: 8GB
+        - Database: MySQL 8.0 with 50GB data
+        - Redis: 2GB
+    validations:
+      required: false
+
+  - type: textarea
+    id: profiling-data
+    attributes:
+      label: Profiling Data
+      description: Do you have any profiling or monitoring data?
+      placeholder: Paste output from monitoring tools, flame graphs, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have identified the slow endpoint
+          required: false
+        - label: I have provided performance metrics
+          required: false
+        - label: I can reproduce the issue consistently
+          required: false

@@ -1,0 +1,96 @@
+name: Report an API Issue
+description: Problem with an API endpoint or response
+title: "[API] "
+labels: ["api", "bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report issues with specific API endpoints, response formats, or behavior.
+
+  - type: dropdown
+    id: api-version
+    attributes:
+      label: API Version
+      description: Which API version are you using?
+      options:
+        - v1 (current)
+        - v1 (legacy)
+    validations:
+      required: false
+
+  - type: textarea
+    id: endpoint
+    attributes:
+      label: Affected Endpoint
+      description: Which endpoint(s) are affected?
+      placeholder: |
+        POST /api/auth/login
+        GET /api/users/profile
+    validations:
+      required: true
+
+  - type: textarea
+    id: request
+    attributes:
+      label: Request Details
+      description: Show the request you're making (headers, body, etc.)
+      render: json
+      placeholder: |
+        {
+          "method": "POST",
+          "url": "/api/auth/login",
+          "headers": {"Content-Type": "application/json"},
+          "body": {"email": "user@example.com", "password": "..."}
+        }
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-response
+    attributes:
+      label: Expected Response
+      description: What response should the API return?
+      render: json
+      placeholder: |
+        {
+          "status": "success",
+          "data": {"token": "..."}
+        }
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual-response
+    attributes:
+      label: Actual Response
+      description: What response did you actually get?
+      render: json
+      placeholder: |
+        {
+          "status": "error",
+          "message": "..."
+        }
+    validations:
+      required: false
+
+  - type: textarea
+    id: server-logs
+    attributes:
+      label: Server Logs
+      description: Any relevant server logs or errors
+      render: bash
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked API documentation
+          required: false
+        - label: I have verified the endpoint exists and is correct
+          required: false
+        - label: I have provided example request/response
+          required: false
