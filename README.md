@@ -113,13 +113,6 @@ Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to
 
 Join our community on [Discord](https://discord.gg/GdhXuEAZ) to discuss ideas and collaborate with other contributors.
 
-## Contributors
-Thanks to the amazing people who had contributed for "server"!
-
-<a href="https://github.com/browseping/server/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=browseping/server" />
-</a>
-
 ## Community & Links
 
 ### Connect With Us
@@ -143,3 +136,10 @@ Thanks to the amazing people who had contributed for "server"!
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributors
+Thanks to all the wonderful people who have contributed to this project.
+
+<a href="https://github.com/browseping/server/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=browseping/server" />
+</a>
