@@ -105,6 +105,40 @@ The server will start on `http://localhost:3000` (or the port specified in your 
 
 5. **Follow our [Contributing Guidelines](CONTRIBUTING.md)** when submitting changes
 
+## Docker (Recommended for Local Development)
+
+This project supports local development using **Docker and Docker Compose.**
+
+Prerequisites
+
+- Docker
+- Docker Compose
+
+### Setup
+
+Copy the environment file:
+```
+cp .env.example .env
+```
+
+For Docker development, update the following values in .env:
+```
+DATABASE_URL=mysql://root:<password>@mysql:3306/browseping
+REDIS_URL=redis://redis:6379
+```
+
+> Docker Compose provides internal networking, so service names (`mysql`, `redis`) are used instead of `localhost`.
+
+Start the application:
+```
+docker compose up --build
+```
+
+The server will be available at:
+```
+http://localhost:3000
+```
+
 ## Contributing
 
 We welcome contributions to the BrowsePing server! Whether it's fixing bugs, improving documentation, or adding new features, your help is appreciated.
