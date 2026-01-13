@@ -105,20 +105,43 @@ The server will start on `http://localhost:3000` (or the port specified in your 
 
 5. **Follow our [Contributing Guidelines](CONTRIBUTING.md)** when submitting changes
 
+## Docker (Recommended for Local Development)
+
+This project supports local development using **Docker and Docker Compose.**
+
+### Setup
+
+Copy the environment file:
+```
+cp .env.example .env
+```
+
+> Edit .env and set your credentials (except `DATABASE_URL` and `REDIS_URL` — those are hardcoded in docker-compose.yml).
+
+Start the application:
+```
+docker compose up --build
+```
+
+The server will be available at:
+```
+http://localhost:3000
+```
+
 ## Contributing
 
 We welcome contributions to the BrowsePing server! Whether it's fixing bugs, improving documentation, or adding new features, your help is appreciated.
 
 Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
 
-Join our community on [Discord](https://discord.gg/GdhXuEAZ) to discuss ideas and collaborate with other contributors.
+Join our community on [Discord](https://discord.gg/Gtv9PFgaHZ) to discuss ideas and collaborate with other contributors.
 
 ## Community & Links
 
 ### Connect With Us
 
 - **Website**: [browseping.com](https://browseping.com)
-- **Discord**: [Join our community](https://discord.gg/GdhXuEAZ)
+- **Discord**: [Join our community](https://discord.gg/Gtv9PFgaHZ)
 - **Twitter/X**: [@BrowsePing](https://x.com/browseping)
 - **LinkedIn**: [BrowsePing Company](https://www.linkedin.com/company/browseping)
 - **GitHub**: [github.com/browseping](https://github.com/browseping)
