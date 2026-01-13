@@ -12,6 +12,7 @@ import { userRoutes,
 import http from 'http';
 import { initializeWebSocketServer } from './websocket/server';
 import { startAnalyticsFlushWorker } from './workers/analyticsFlushWorker';
+import { setupSwagger } from './config/swagger';
 
 
 const app = express();
@@ -35,6 +36,10 @@ app.use('/api/forgot-password', forgotPasswordRoutes);
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+
+// Setup Swagger documentation (development only)
+setupSwagger(app);
+
 
 
 const server = http.createServer(app);

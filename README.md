@@ -86,6 +86,68 @@ The server will start on `http://localhost:3000` (or the port specified in your 
 - **`npm start`** - Run production server (requires build first)
 - **`npm run prisma:generate`** - Generate Prisma Client
 - **`npm run prisma:migrate`** - Run database migrations
+- **`npm run generate:swagger`** - Generate Swagger API documentation locally
+- **`npm run dev:docs`** - Generate docs and start development server
+
+## API Documentation
+
+BrowsePing uses **Swagger/OpenAPI** for interactive API documentation. The documentation is generated locally and is **development-only** (never deployed to production).
+
+### Generating Documentation
+
+To generate the Swagger documentation:
+
+```bash
+npm run generate:swagger
+```
+
+This will create a `swagger-output.json` file in the project root with all API endpoint documentation.
+
+### Viewing Documentation
+
+1. **Generate the documentation** (if not already done):
+   ```bash
+   npm run generate:swagger
+   ```
+
+2. **Set the environment variable** in your `.env` file:
+   ```bash
+   ENABLE_SWAGGER_DOCS=true
+   ```
+
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+   
+   Or use the convenience script that does both:
+   ```bash
+   npm run dev:docs
+   ```
+
+4. **Access Swagger UI** at:
+   ```
+   http://localhost:3000/api-docs
+   ```
+
+### Important Notes
+
+- 📝 **Documentation is local-only** - Generated files are not committed to version control
+- 🔒 **Production safety** - Swagger UI is disabled in production environments
+- 🔄 **Regenerate after changes** - Run `npm run generate:swagger` after modifying routes
+- ⚙️ **Environment control** - Set `ENABLE_SWAGGER_DOCS=false` to disable docs in `.env`
+
+### Troubleshooting
+
+**Swagger UI not appearing?**
+- Ensure `ENABLE_SWAGGER_DOCS=true` in your `.env` file
+- Run `npm run generate:swagger` to create documentation
+- Check console for warnings about missing documentation file
+
+**Need to update documentation?**
+- Modify JSDoc comments in route files
+- Run `npm run generate:swagger` to regenerate
+- Restart the development server
 
 ## Development Workflow
 
