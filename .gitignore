@@ -2,3 +2,8 @@ node_modules
 dist
 .env
 tsconfig.tsbuildinfo
+
+# Swagger Documentation (Generated)
+swagger-output.json
+swagger.json
+/docs
