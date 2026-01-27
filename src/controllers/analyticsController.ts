@@ -91,10 +91,11 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
   const timezone = resolveTimezone(req.query.timezone);
   const userId = req.user.id;
   const weekData: { date: string, domains: { domain: string, seconds: number }[] }[] = [];
+  const userNow = toZonedTime(new Date(), timezone);
   for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const { start, end } = getUserDayRange(date, timezone);
+    const userDate = new Date(userNow);
+    userDate.setDate(userNow.getDate() - i);
+    const { start, end } = getUserDayRange(userDate, timezone);
     const usages = await prisma.tabUsage.findMany({
       where: {
         userId,
@@ -102,7 +103,7 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
       }
     });
     weekData.push({
-      date: toZonedTime(start, timezone).toISOString().slice(0, 10),
+      date: userDate.toISOString().slice(0, 10),
       domains: usages.map(u => ({ domain: u.domain, seconds: u.seconds }))
     });
   }
