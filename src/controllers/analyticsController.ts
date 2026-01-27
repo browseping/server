@@ -4,20 +4,40 @@ import { getCurrentTabSession, incrementTabAggregate, getTabAggregates, clearTab
 import { flushPresenceForUser } from '../utils/flushPresence';
 import { flushTabUsageForUser } from "../utils/flushTabUsage";
 import { wsClients } from '../websocket/handler';
+import { toZonedTime, fromZonedTime } from "date-fns-tz"; //For Fixing the User and UTC time analytics Issue
 
-// Helper to get start/end of a day
-function getDayRange(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
+//Makes sure No garbage Value is sent by the user in  else Time is set in UTC
+function resolveTimezone(tz: unknown): string {
+  const zone =
+    Array.isArray(tz) ? tz[0] :
+    typeof tz === "string" ? tz :
+    null;
+  if (!zone) return "UTC";
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: zone });
+    return zone;
+  } catch {
+    return "UTC";
+  }
+}
+
+// Helper to get start/end of a day(according to the user time)
+function getUserDayRange(date: Date, timezone: string) {
+  const zonedDate = toZonedTime(date, timezone);
+  const startZoned = new Date(zonedDate);
+  startZoned.setHours(0, 0, 0, 0);
+  const endZoned = new Date(zonedDate);
+  endZoned.setHours(23, 59, 59, 999);
+  const startUtc = fromZonedTime(startZoned, timezone);
+  const endUtc = fromZonedTime(endZoned, timezone);
+  return { start: startUtc, end: endUtc };
 }
 
 // GET /api/analytics/presence/today
 export const getTodayPresence = async (req: Request, res: Response) => {
   const userId = req.user.id;
-  const { start, end } = getDayRange(new Date());
+  const timezone = resolveTimezone(req.query.timezone);
+  const { start, end } = getUserDayRange(new Date(), timezone);
   const sessions = await prisma.presenceSession.findMany({
     where: {
       userId,
@@ -31,12 +51,13 @@ export const getTodayPresence = async (req: Request, res: Response) => {
 
 // GET /api/analytics/presence/weekly
 export const getWeeklyPresence = async (req: Request, res: Response) => {
+  const timezone = resolveTimezone(req.query.timezone);
   const userId = req.user.id;
   const days: { date: string, totalSeconds: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
-    const { start, end } = getDayRange(date);
+    const { start, end } = getUserDayRange(date, timezone);
     const sessions = await prisma.presenceSession.findMany({
       where: {
         userId,
@@ -45,15 +66,16 @@ export const getWeeklyPresence = async (req: Request, res: Response) => {
     });
     const totalSeconds = sessions.reduce((sum, s) =>
       sum + (s.duration ?? (s.endTime ? Math.floor((s.endTime.getTime() - s.startTime.getTime()) / 1000) : 0)), 0);
-    days.push({ date: start.toISOString().slice(0, 10), totalSeconds });
+    days.push({ date: toZonedTime(start, timezone).toISOString().slice(0, 10), totalSeconds });
   }
   res.json({ success: true, days });
 };
 
 // GET /api/analytics/tab-usage/today
 export const getTodayTabUsage = async (req: Request, res: Response) => {
+  const timezone = resolveTimezone(req.query.timezone);
   const userId = req.user.id;
-  const { start, end } = getDayRange(new Date());
+  const { start, end } = getUserDayRange(new Date(), timezone);
   const usages = await prisma.tabUsage.findMany({
     where: {
       userId,
@@ -66,12 +88,14 @@ export const getTodayTabUsage = async (req: Request, res: Response) => {
 
 // GET /api/analytics/tab-usage/weekly
 export const getWeeklyTabUsage = async (req: Request, res: Response) => {
+  const timezone = resolveTimezone(req.query.timezone);
   const userId = req.user.id;
   const weekData: { date: string, domains: { domain: string, seconds: number }[] }[] = [];
+  const userNow = toZonedTime(new Date(), timezone);
   for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const { start, end } = getDayRange(date);
+    const userDate = new Date(userNow);
+    userDate.setDate(userNow.getDate() - i);
+    const { start, end } = getUserDayRange(userDate, timezone);
     const usages = await prisma.tabUsage.findMany({
       where: {
         userId,
@@ -79,7 +103,7 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
       }
     });
     weekData.push({
-      date: start.toISOString().slice(0, 10),
+      date: userDate.toISOString().slice(0, 10),
       domains: usages.map(u => ({ domain: u.domain, seconds: u.seconds }))
     });
   }
@@ -89,6 +113,7 @@ export const getWeeklyTabUsage = async (req: Request, res: Response) => {
 
 // GET /api/analytics/presence/hourly?days=7
 export const getHourlyPresence = async (req: Request, res: Response) => {
+  const timezone = resolveTimezone(req.query.timezone);
   const userId = req.user.id;
   const days = Number(req.query.days) || 7;
   const now = new Date();
@@ -101,10 +126,10 @@ export const getHourlyPresence = async (req: Request, res: Response) => {
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(now.getDate() - i);
-    const { start, end } = getDayRange(date);
+    const { start, end } = getUserDayRange(date, timezone);
 
-    if (!startDate) startDate = start.toISOString().slice(0, 10);
-    endDate = end.toISOString().slice(0, 10);
+    if (!startDate) startDate = toZonedTime(start, timezone).toISOString().slice(0, 10);
+    endDate = toZonedTime(end, timezone).toISOString().slice(0, 10);
 
     const sessions = await prisma.presenceSession.findMany({
       where: {
@@ -121,10 +146,12 @@ export const getHourlyPresence = async (req: Request, res: Response) => {
       if (s < start) s = start;
 
       while (s < e) {
-        const hour = s.getHours();
-        const nextHour = new Date(s);
-        nextHour.setHours(hour + 1, 0, 0, 0);
-        const segmentEnd = nextHour < e ? nextHour : e;
+        const zonedS = toZonedTime(s, timezone);
+        const hour = zonedS.getHours();
+        const nextHourZoned = new Date(zonedS);
+        nextHourZoned.setHours(hour + 1, 0, 0, 0);
+        const nextHourUtc = fromZonedTime(nextHourZoned, timezone);
+        const segmentEnd = nextHourUtc < e ? nextHourUtc : e;
         const seconds = Math.floor((segmentEnd.getTime() - s.getTime()) / 1000);
         hours[hour] += seconds;
         totalSeconds += seconds;
