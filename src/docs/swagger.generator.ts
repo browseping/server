@@ -55,7 +55,7 @@ function writeSwaggerFile(doc: SwaggerDoc): void {
     console.log(`Swagger documentation generated successfully!`);
     console.log(`Output file: ${outputPath}`);
   } catch (error) {
-    console.error('❌ Error writing swagger output file:', error);
+    console.error('Error writing swagger output file:', error);
     process.exit(1);
   }
 }
@@ -64,6 +64,6 @@ function writeSwaggerFile(doc: SwaggerDoc): void {
 const swaggerDoc = generateSwaggerDoc();
 writeSwaggerFile(swaggerDoc);
 
-console.log('\n📚 To view the documentation:');
+console.log('\n To view the documentation:');
 console.log('   1. Start the dev server: npm run dev');
 console.log('   2. Open http://localhost:3000/api-docs in your browser');
