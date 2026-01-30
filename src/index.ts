@@ -12,6 +12,7 @@ import { userRoutes,
 import http from 'http';
 import { initializeWebSocketServer } from './websocket/server';
 import { startAnalyticsFlushWorker } from './workers/analyticsFlushWorker';
+import { setupSwaggerDocs } from './docs/swagger.setup';
 
 
 const app = express();
@@ -19,6 +20,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Setup Swagger API documentation (development only)
+setupSwaggerDocs(app);
 
 // Routes
 app.use('/api/users', userRoutes);
