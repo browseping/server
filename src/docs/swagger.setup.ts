@@ -46,12 +46,12 @@ function swaggerFileExists(): boolean {
  */
 export async function setupSwaggerDocs(app: Express): Promise<void> {
   if (!isDocsEnabled()) {
-    console.log('📚 API documentation is disabled');
+    console.log('API documentation is disabled');
     return;
   }
 
   if (!swaggerFileExists()) {
-    console.log('⚠️  Swagger documentation not found. Run "npm run generate:swagger" to generate.');
+    console.log('Swagger documentation not found. Run "npm run generate:swagger" to generate.');
     
     // Add a placeholder route that informs developers
     app.get('/api-docs', (_req: Request, res: Response) => {
@@ -91,9 +91,9 @@ export async function setupSwaggerDocs(app: Express): Promise<void> {
       res.json(swaggerDocument);
     });
 
-    console.log(`📚 API documentation available at /api-docs`);
+    console.log(`API documentation available at /api-docs`);
   } catch (error) {
-    console.error('❌ Failed to setup Swagger documentation:', error);
+    console.error('Failed to setup Swagger documentation:', error);
     
     // Add error route
     app.get('/api-docs', (_req: Request, res: Response) => {
