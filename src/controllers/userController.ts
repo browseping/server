@@ -4,6 +4,7 @@ import { SignupRequest, LoginRequest, ApiResponse } from '../types';
 import bcrypt from 'bcrypt';
 import { generateToken, generateSessionId } from '../utils/jwt';
 import { isEmailVerified, clearEmailVerification } from '../utils/redis';
+import { normalizeLoginIdentifier } from '../utils/loginIdentifier';
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -74,8 +75,15 @@ export const signup = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { identifier, password } = req.body;
-    if (!identifier || !password) {
+    const { password } = req.body;
+    const normalizedIdentifier = normalizeLoginIdentifier(req.body?.identifier);
+
+    // validateLogin guarantees password is present; this catches non-string identifiers
+    // (e.g. []) that pass validateLogin's truthy check but fail normalization.
+    if (!normalizedIdentifier) {
+      if (res.locals.incrementEmailAttempt) {
+        await res.locals.incrementEmailAttempt();
+      }
       return res.status(400).json({
         success: false,
         message: 'Missing credentials',
@@ -83,15 +91,18 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const isEmail = identifier.includes('@');
-    
+    const isEmail = normalizedIdentifier.includes('@');
+
     const user = await prisma.user.findUnique({
-      where: isEmail 
-        ? { email: identifier }
-        : { username: identifier }
+      where: isEmail
+        ? { email: normalizedIdentifier }
+        : { username: normalizedIdentifier }
     });
-    
+
     if (!user) {
+      if (res.locals.incrementEmailAttempt) {
+        await res.locals.incrementEmailAttempt();
+      }
       return res.status(401).json({
         success: false,
         message: 'Authentication failed',
@@ -100,13 +111,20 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
+      if (res.locals.incrementEmailAttempt) {
+        await res.locals.incrementEmailAttempt();
+      }
       return res.status(401).json({
         success: false,
         message: 'Authentication failed',
         error: 'Invalid credentials'
       });
+    }
+
+    if (res.locals.clearEmailAttempts) {
+      await res.locals.clearEmailAttempts();
     }
     
     const sessionId = generateSessionId();

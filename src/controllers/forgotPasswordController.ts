@@ -17,6 +17,7 @@ import {
 } from '../utils/redis';
 import { sendOTPEmail, sendPasswordResetOTPEmail } from '../services/emailService';
 import prisma from '../utils/prisma';
+import { isEmailIdentifier, normalizeEmail } from '../utils/loginIdentifier';
 
 export const requestForgotPasswordOTP = async (req: Request, res: Response) => {
   try {
@@ -30,18 +31,17 @@ export const requestForgotPasswordOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     
     let user;
     let email;
 
     if (isEmail) {
+      email = normalizeEmail(identifier);
       user = await prisma.user.findUnique({
-        where: { email: identifier },
+        where: { email },
         select: { id: true, email: true, username: true }
       });
-      email = identifier;
     } else {
       user = await prisma.user.findUnique({
         where: { username: identifier },
@@ -114,12 +114,11 @@ export const verifyForgotPasswordOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     let email: string;
 
     if (isEmail) {
-      email = identifier;
+      email = normalizeEmail(identifier);
     } else {
       const user = await prisma.user.findUnique({
         where: { username: identifier },
@@ -213,13 +212,12 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     let email: string;
     let user;
 
     if (isEmail) {
-      email = identifier;
+      email = normalizeEmail(identifier);
       user = await prisma.user.findUnique({
         where: { email },
         select: { id: true, email: true }

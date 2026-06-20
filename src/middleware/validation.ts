@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { SignupRequest, LoginRequest } from '../types/index';
+import { SignupRequest } from '../types/index';
+import { normalizeEmail } from '../utils/loginIdentifier';
 
 const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{3,15}$/;
 const consecutiveSpecialChars = /[_-]{2,}/;
@@ -46,6 +47,8 @@ export const validateSignup = (req: Request, res: Response, next: NextFunction) 
     });
   }
 
+  req.body.email = normalizeEmail(email);
+
   if (!password || password.length < 8) {
     return res.status(400).json({
       success: false,
@@ -57,9 +60,9 @@ export const validateSignup = (req: Request, res: Response, next: NextFunction) 
   next();
 };
 
-export const validateLogin = (req: Request, res: Response, next: NextFunction) => {
+export const validateLogin = async (req: Request, res: Response, next: NextFunction) => {
   const { identifier, password } = req.body;
-  
+
   if (!identifier) {
     return res.status(400).json({
       success: false,
@@ -67,14 +70,17 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
       error: 'Username or email must be provided'
     });
   }
-  
+
   if (!password) {
+    if (res.locals.incrementEmailAttempt) {
+      await res.locals.incrementEmailAttempt();
+    }
     return res.status(400).json({
       success: false,
       message: 'Password is required',
       error: 'Password must be provided'
     });
   }
-  
+
   next();
 };

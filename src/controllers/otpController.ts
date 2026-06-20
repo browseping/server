@@ -15,6 +15,7 @@ import {
 } from '../utils/redis';
 import { sendOTPEmail } from '../services/emailService';
 import prisma from '../utils/prisma';
+import { normalizeEmail } from '../utils/loginIdentifier';
 
 export const requestOTP = async (req: Request, res: Response) => {
   try {
@@ -29,7 +30,7 @@ export const requestOTP = async (req: Request, res: Response) => {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (typeof email !== 'string' || !emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email format',
@@ -37,8 +38,10 @@ export const requestOTP = async (req: Request, res: Response) => {
       });
     }
 
+    const normalizedEmail = normalizeEmail(email);
+
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: normalizedEmail }
     });
 
     if (existingUser) {
@@ -49,7 +52,7 @@ export const requestOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const attempts = await checkOTPAttempts(email);
+    const attempts = await checkOTPAttempts(normalizedEmail);
     if (attempts >= 3) {
       return res.status(429).json({
         success: false,
@@ -59,11 +62,11 @@ export const requestOTP = async (req: Request, res: Response) => {
     }
 
     const otp = generateOTP();
-    await storeOTP(email, otp);
-    await incrementOTPAttempts(email);
+    await storeOTP(normalizedEmail, otp);
+    await incrementOTPAttempts(normalizedEmail);
 
     try {
-      await sendOTPEmail(email, otp);
+      await sendOTPEmail(normalizedEmail, otp);
     } catch (emailError) {
       console.error('Email sending failed:', emailError);
       return res.status(500).json({
@@ -77,7 +80,7 @@ export const requestOTP = async (req: Request, res: Response) => {
       success: true,
       message: 'OTP sent successfully',
       data: {
-        email,
+        email: normalizedEmail,
         expiresIn: 300 // 5 minutes
       }
     });
@@ -104,10 +107,20 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       });
     }
 
-    const verificationAttempts = await checkOTPVerificationAttempts(email);
+    if (typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format',
+        error: 'Please provide a valid email address'
+      });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
+    const verificationAttempts = await checkOTPVerificationAttempts(normalizedEmail);
     if (verificationAttempts >= 5) {
-      await deleteOTP(email);
-      await resetOTPVerificationAttempts(email);
+      await deleteOTP(normalizedEmail);
+      await resetOTPVerificationAttempts(normalizedEmail);
       
       return res.status(429).json({
         success: false,
@@ -117,16 +130,16 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       });
     }
 
-    const isValid = await verifyOTP(email, otp);
+    const isValid = await verifyOTP(normalizedEmail, otp);
     
     if (!isValid) {
-      const newAttempts = await incrementOTPVerificationAttempts(email);
+      const newAttempts = await incrementOTPVerificationAttempts(normalizedEmail);
       
       const remainingAttempts = 5 - newAttempts;
       
       if (remainingAttempts <= 0) {
-        await deleteOTP(email);
-        await resetOTPVerificationAttempts(email);
+        await deleteOTP(normalizedEmail);
+        await resetOTPVerificationAttempts(normalizedEmail);
         
         return res.status(429).json({
           success: false,
@@ -144,16 +157,16 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       });
     }
 
-    await markEmailVerified(email);
-    await deleteOTP(email);
-    await resetOTPAttempts(email);
-    await resetOTPVerificationAttempts(email);
+    await markEmailVerified(normalizedEmail);
+    await deleteOTP(normalizedEmail);
+    await resetOTPAttempts(normalizedEmail);
+    await resetOTPVerificationAttempts(normalizedEmail);
 
     return res.status(200).json({
       success: true,
       message: 'Email verified successfully',
       data: {
-        email,
+        email: normalizedEmail,
         verified: true,
         validFor: 300 // 5 minutes
       }
@@ -181,13 +194,14 @@ export const checkEmailVerification = async (req: Request, res: Response) => {
       });
     }
 
-    const verified = await isEmailVerified(email);
+    const normalizedEmail = normalizeEmail(email);
+    const verified = await isEmailVerified(normalizedEmail);
 
     return res.status(200).json({
       success: true,
       message: 'Email verification status retrieved',
       data: {
-        email,
+        email: normalizedEmail,
         verified
       }
     });

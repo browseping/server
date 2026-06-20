@@ -251,4 +251,25 @@ export const clearEmailVerification = async (email: string) => {
   await redis.del(`otp:verified:${email}`);
 };
 
+const INCR_WITH_EXPIRE_SCRIPT = `
+  local count = redis.call('INCR', KEYS[1])
+  if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+  end
+  return count
+`;
+
+export const incrementKeyWithExpiry = async (
+  key: string,
+  expirySeconds: number
+): Promise<number> => {
+  const result = await redis.eval(
+    INCR_WITH_EXPIRE_SCRIPT,
+    1,
+    key,
+    expirySeconds
+  );
+  return Number(result);
+};
+
 export default redis;
