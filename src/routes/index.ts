@@ -7,6 +7,7 @@ import conversationRoutes from './conversationRoutes';
 import notificationRoutes from './notificationRoutes';
 import otpRoutes from './otpRoutes';
 import forgotPasswordRoutes from './forgotPasswordRoutes';
+import authRoutes from './authRoutes';
 
 export { 
     userRoutes,
@@ -17,5 +18,6 @@ export {
     conversationRoutes,
     notificationRoutes,
     otpRoutes,
-    forgotPasswordRoutes
+    forgotPasswordRoutes,
+    authRoutes
 };

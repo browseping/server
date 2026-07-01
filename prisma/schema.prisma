@@ -50,10 +50,15 @@ enum NotificationPriority {
   HIGH
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 model User {
   id             String   @id @default(uuid())
   username       String   @unique
-  password       String
+  password       String?
   email          String   @unique
   displayName    String?
   bio            String?  @db.Text
@@ -66,6 +71,11 @@ model User {
 
   // Session management
   sessionId      String?
+
+  // Authentication (Google OAuth — Step 2)
+  googleId       String?      @unique
+  authProvider   AuthProvider @default(LOCAL)
+  emailVerified  Boolean      @default(false)
 
   // Privacy settings
   emailPrivacy   PrivacyLevel @default(friends_only)

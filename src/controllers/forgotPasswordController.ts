@@ -17,6 +17,8 @@ import {
 } from '../utils/redis';
 import { sendOTPEmail, sendPasswordResetOTPEmail } from '../services/emailService';
 import prisma from '../utils/prisma';
+import { normalizeEmail, isEmailIdentifier } from '../utils/loginIdentifier';
+import { isGoogleOnlyUser } from '../utils/authHelpers';
 
 export const requestForgotPasswordOTP = async (req: Request, res: Response) => {
   try {
@@ -30,22 +32,33 @@ export const requestForgotPasswordOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     
     let user;
     let email;
 
     if (isEmail) {
+      email = normalizeEmail(identifier);
       user = await prisma.user.findUnique({
-        where: { email: identifier },
-        select: { id: true, email: true, username: true }
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          authProvider: true,
+          password: true
+        }
       });
-      email = identifier;
     } else {
       user = await prisma.user.findUnique({
         where: { username: identifier },
-        select: { id: true, email: true, username: true }
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          authProvider: true,
+          password: true
+        }
       });
       email = user?.email;
     }
@@ -55,6 +68,15 @@ export const requestForgotPasswordOTP = async (req: Request, res: Response) => {
         success: false,
         message: 'Account not found',
         error: 'No account found with this username or email'
+      });
+    }
+
+    if (isGoogleOnlyUser(user)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset not available',
+        error: 'This account uses Google sign-in. Please sign in with Google instead.',
+        useGoogleLogin: true
       });
     }
 
@@ -114,16 +136,20 @@ export const verifyForgotPasswordOTP = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     let email: string;
+    let user;
 
     if (isEmail) {
-      email = identifier;
+      email = normalizeEmail(identifier);
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: { email: true, authProvider: true, password: true }
+      });
     } else {
-      const user = await prisma.user.findUnique({
+      user = await prisma.user.findUnique({
         where: { username: identifier },
-        select: { email: true }
+        select: { email: true, authProvider: true, password: true }
       });
 
       if (!user) {
@@ -135,6 +161,23 @@ export const verifyForgotPasswordOTP = async (req: Request, res: Response) => {
       }
 
       email = user.email;
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found',
+        error: 'No account found with this identifier'
+      });
+    }
+
+    if (isGoogleOnlyUser(user)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset not available',
+        error: 'This account uses Google sign-in. Please sign in with Google instead.',
+        useGoogleLogin: true
+      });
     }
 
     const verificationAttempts = await checkOTPVerificationAttempts(email);
@@ -213,21 +256,20 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(identifier);
+    const isEmail = isEmailIdentifier(identifier);
     let email: string;
     let user;
 
     if (isEmail) {
-      email = identifier;
+      email = normalizeEmail(identifier);
       user = await prisma.user.findUnique({
         where: { email },
-        select: { id: true, email: true }
+        select: { id: true, email: true, authProvider: true, password: true }
       });
     } else {
       user = await prisma.user.findUnique({
         where: { username: identifier },
-        select: { id: true, email: true }
+        select: { id: true, email: true, authProvider: true, password: true }
       });
       email = user?.email || '';
     }
@@ -237,6 +279,15 @@ export const resetPassword = async (req: Request, res: Response) => {
         success: false,
         message: 'User not found',
         error: 'No user found with this identifier'
+      });
+    }
+
+    if (isGoogleOnlyUser(user)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset not available',
+        error: 'This account uses Google sign-in. Please sign in with Google instead.',
+        useGoogleLogin: true
       });
     }
 

@@ -4,6 +4,8 @@ import { SignupRequest, LoginRequest, ApiResponse } from '../types';
 import bcrypt from 'bcrypt';
 import { generateToken, generateSessionId } from '../utils/jwt';
 import { isEmailVerified, clearEmailVerification } from '../utils/redis';
+import { normalizeEmail, isEmailIdentifier } from '../utils/loginIdentifier';
+import { isGoogleOnlyUser } from '../utils/authHelpers';
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -83,12 +85,14 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const isEmail = identifier.includes('@');
-    
+    const normalizedIdentifier = isEmailIdentifier(identifier)
+      ? normalizeEmail(identifier)
+      : identifier;
+
     const user = await prisma.user.findUnique({
-      where: isEmail 
-        ? { email: identifier }
-        : { username: identifier }
+      where: isEmailIdentifier(identifier)
+        ? { email: normalizedIdentifier }
+        : { username: normalizedIdentifier }
     });
     
     if (!user) {
@@ -99,7 +103,19 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (isGoogleOnlyUser(user)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed',
+        error: 'This account uses Google sign-in. Please continue with Google.',
+        useGoogleLogin: true
+      });
+    }
+
+    const isPasswordValid = user.password
+      ? await bcrypt.compare(password, user.password)
+      : false;
+      
     
     if (!isPasswordValid) {
       return res.status(401).json({
